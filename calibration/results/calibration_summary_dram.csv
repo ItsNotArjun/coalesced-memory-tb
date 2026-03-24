@@ -1,0 +1,12 @@
+# GPU Energy Model Calibration -- Summary
+# Reference: Delestrac et al. ASAP 2024, Section V-B
+# GPU: NVIDIA GeForce RTX 3060 Laptop GPU
+# Memory level: dram
+# Stride (bytes): 32
+# Access granularity (bytes): 32
+# Threads per block: 1024
+# Thread blocks: 4
+#
+operation,epsilon_mem_j_per_access,epsilon_mem_pj_per_access,epsilon_mem_nj_per_access,delta_mem_offset_j,r_squared,granularity_bytes,stride_bytes,threads_per_block,blocks
+load,0.000000000000,0.000000,0.000000000,0.000000,0.000000,32,32,1024,4
+store,0.000000000000,0.000000,0.000000000,0.000000,0.000000,32,32,1024,4

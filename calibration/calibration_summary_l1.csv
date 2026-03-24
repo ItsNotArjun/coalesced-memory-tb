@@ -1,0 +1,11 @@
+# GPU Energy Model Calibration — Summary
+# GPU: NVIDIA A100-SXM4-80GB (SAMPLE DATA)
+# Memory level: l1
+# Stride (bytes): 32
+# Access granularity (bytes): 32
+# Threads per block: 1024
+# Thread blocks: 4
+#
+operation,epsilon_mem_j_per_access,epsilon_mem_pj_per_access,epsilon_mem_nj_per_access,delta_mem_offset_j,r_squared,granularity_bytes,stride_bytes,threads_per_block,blocks
+load,0.0000000001,106.672997,0.106672997,19.954824,0.444833,32,32,1024,4
+store,0.0000000001,103.970963,0.103970963,21.963331,0.405238,32,32,1024,4

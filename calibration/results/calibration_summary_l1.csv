@@ -1,0 +1,12 @@
+# GPU Energy Model Calibration -- Summary
+# Reference: Delestrac et al. ASAP 2024, Section V-B
+# GPU: SYNTHETIC
+# Memory level: l1
+# Stride (bytes): 32
+# Access granularity (bytes): 32
+# Threads per block: 1024
+# Thread blocks: 4
+#
+operation,epsilon_mem_j_per_access,epsilon_mem_pj_per_access,epsilon_mem_nj_per_access,delta_mem_offset_j,r_squared,granularity_bytes,stride_bytes,threads_per_block,blocks
+load,0.000000000131,130.539391,0.130539391,19.983566,0.659712,32,32,1024,4
+store,0.000000000142,142.043099,0.142043099,20.027828,0.720707,32,32,1024,4
