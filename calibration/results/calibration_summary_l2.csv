@@ -1,6 +1,6 @@
 # GPU Energy Model Calibration -- Summary
 # Reference: Delestrac et al. ASAP 2024, Section V-B
-# GPU: NVIDIA GeForce RTX 3060 Laptop GPU
+# GPU: NVIDIA RTX 5000 Ada Generation
 # Memory level: l2
 # Stride (bytes): 32
 # Access granularity (bytes): 32
