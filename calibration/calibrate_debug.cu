@@ -1,12 +1,3 @@
-/*
-    89 for gpu, 86 for laptop
-
-    ARCH=sm_89 make
-    make run-l1
-    make run-all
-    make dry-run
-*/
-
 /**
  * calibrate.cu  —  GPU Energy Model Calibration Tool
  * =====================================================
@@ -111,10 +102,19 @@
 /* ═══════════════════════ constants ═══════════════════════════════════════ */
 #define ELEM_SIZE          8ULL
 #define UNROLL             8
-#define POWER_SAMPLE_MS    50           /* poll interval for smi/nvml (ms)   */
-#define MAX_POWER_SAMPLES  20000
-#define IDLE_DELAY_MS      500
-#define IDLE_WINDOW_MS     400
+/*
+ * POWER_SAMPLE_MS = 1 ms.
+ * The L1 kernel at small access counts completes in < 1 ms on a fast GPU.
+ * At 50 ms the sampler simply never wakes during the kernel window → zero.
+ * NVML handles 1 ms polling reliably; the paper uses a 5 ms interval on
+ * A100 because kernels there run for many seconds.  For shorter kernels we
+ * need a finer interval.  MAX_POWER_SAMPLES is raised accordingly so we
+ * never run out of buffer even for long DRAM sweeps.
+ */
+#define POWER_SAMPLE_MS    1            /* 1 ms — catches even sub-ms kernels */
+#define MAX_POWER_SAMPLES  600000       /* 600 s worth at 1 ms                */
+#define IDLE_DELAY_MS      500          /* CPU sleep before/after kernel      */
+#define IDLE_WINDOW_MS     300          /* must be < IDLE_DELAY_MS            */
 
 /* Power measurement method tags */
 typedef enum { PWR_NVML=0, PWR_SMI, PWR_TDP } PwrMethod;
@@ -296,6 +296,8 @@ typedef struct {
     int    n_kernel_samples;
 } EnergyResult;
 
+static int g_energy_diag = 1;   /* print diagnostics for first few calls */
+
 static EnergyResult compute_energy(const PowerSampler *ps,
                                     uint64_t kernel_start_us,
                                     uint64_t kernel_end_us)
@@ -303,7 +305,26 @@ static EnergyResult compute_energy(const PowerSampler *ps,
     EnergyResult r = {0};
     int n = ps->n_samples;
 
-    uint64_t idle_lo = kernel_start_us - (uint64_t)(IDLE_WINDOW_MS * 1000);
+    if (g_energy_diag > 0) {
+        g_energy_diag--;
+        printf("  [diag] compute_energy: n_samples=%d  "
+               "kernel=[%llu, %llu]  duration_us=%llu\n",
+               n,
+               (unsigned long long)kernel_start_us,
+               (unsigned long long)kernel_end_us,
+               (unsigned long long)(kernel_end_us - kernel_start_us));
+        if (n > 0)
+            printf("  [diag] first_sample_ts=%llu  last_sample_ts=%llu\n",
+                   (unsigned long long)ps->timestamps_us[0],
+                   (unsigned long long)ps->timestamps_us[n-1]);
+    }
+
+    /* Guard against uint64_t underflow: if sampler just started and
+       kernel_start_us < IDLE_WINDOW_MS*1000, subtraction wraps to a huge
+       number and the idle check matches every sample.  Clamp to 0. */
+    uint64_t idle_window_us = (uint64_t)(IDLE_WINDOW_MS * 1000);
+    uint64_t idle_lo = (kernel_start_us > idle_window_us)
+                     ? kernel_start_us - idle_window_us : 0;
     double   idle_sum = 0.0;
     for (int i=0; i<n; ++i) {
         uint64_t t = ps->timestamps_us[i];
@@ -941,6 +962,50 @@ int main(int argc, char **argv)
         printf("GPU warmed up.\n\n");
     }
 
+    /*
+     * Timing pre-run: launch the load kernel with n_iters=1 and measure
+     * elapsed time via cudaEvent.  Use this to compute min_iters_for_duration:
+     * the minimum n_iters needed so the measurement kernel runs for at least
+     * MIN_KERNEL_MS milliseconds, ensuring the 1ms power sampler captures
+     * at least MIN_KERNEL_SAMPLES power readings inside the kernel window.
+     *
+     * Without this, a fast GPU (RTX 5000 Ada) finishes the smallest L1 kernel
+     * in < 1 ms and the sampler never wakes during the execution window.
+     */
+    uint32_t min_iters_for_duration = 0;
+    if (!cfg.dry_run) {
+        const double MIN_KERNEL_MS      = 200.0;  /* target kernel duration   */
+        const int    MIN_KERNEL_SAMPLES = 50;     /* minimum samples to catch */
+
+        uint64_t *d_tmp2; CUDA_CHECK(cudaMalloc(&d_tmp2,sizeof(uint64_t)));
+        cudaEvent_t ev0, ev1;
+        CUDA_CHECK(cudaEventCreate(&ev0));
+        CUDA_CHECK(cudaEventCreate(&ev1));
+        CUDA_CHECK(cudaEventRecord(ev0));
+        load_kernel<<<cfg.blocks,cfg.threads>>>(d_chain,n_elems,stride_e,1,0,d_tmp2);
+        CUDA_CHECK(cudaEventRecord(ev1));
+        CUDA_CHECK(cudaEventSynchronize(ev1));
+        float ms1 = 0.0f;
+        CUDA_CHECK(cudaEventElapsedTime(&ms1, ev0, ev1));
+        CUDA_CHECK(cudaEventDestroy(ev0));
+        CUDA_CHECK(cudaEventDestroy(ev1));
+        CUDA_CHECK(cudaFree(d_tmp2));
+
+        if (ms1 > 0.0f) {
+            /* iters needed for MIN_KERNEL_MS wall-clock */
+            uint32_t iters_for_time = (uint32_t)ceil(MIN_KERNEL_MS / ms1);
+            /* iters needed for MIN_KERNEL_SAMPLES at POWER_SAMPLE_MS interval */
+            uint32_t iters_for_samples = (uint32_t)ceil(
+                (MIN_KERNEL_SAMPLES * POWER_SAMPLE_MS) / ms1);
+            min_iters_for_duration = iters_for_time > iters_for_samples
+                                   ? iters_for_time : iters_for_samples;
+            if (min_iters_for_duration < 1) min_iters_for_duration = 1;
+            printf(" Timing pre-run: 1 iter = %.3f ms  "
+                   "→ min iters for %.0f ms = %u\n\n",
+                   ms1, MIN_KERNEL_MS, min_iters_for_duration);
+        }
+    }
+
     uint64_t *acc_vals=(uint64_t *)malloc(cfg.acc_steps*sizeof(uint64_t));
     gen_acc_sweep(acc_vals, cfg.acc_steps, cfg.min_acc_M, cfg.max_acc_M);
 
@@ -963,6 +1028,16 @@ int main(int argc, char **argv)
                 cfg.threads,cfg.stride,cfg.granularity)*(uint64_t)UNROLL;   \
             uint32_t ni=base>0?(uint32_t)((acc_vals[i]+base-1)/base):cfg.n_iters;\
             if(ni<1) ni=1;                                                   \
+            /* Ensure the measurement kernel runs long enough for the power  \
+             * sampler to capture several samples.  At 1 ms poll rate we     \
+             * want at least MIN_KERNEL_SAMPLES samples inside the window,   \
+             * so the kernel must run at least MIN_KERNEL_SAMPLES ms.        \
+             * We achieve this by repeating the n_iters loop enough times.   \
+             * The measured energy still scales linearly with ni because each \
+             * iteration does the same work.                                 */ \
+            if (!cfg.dry_run && min_iters_for_duration > 0                   \
+                && ni < min_iters_for_duration)                               \
+                ni = min_iters_for_duration;                                  \
             if (cfg.dry_run) {                                               \
                 uint64_t act=calc_accesses(cfg.array_bytes,cfg.blocks,       \
                     cfg.threads,cfg.stride,cfg.granularity)                  \
