@@ -126,35 +126,69 @@ int main() {
     cudaMemcpy(d_a, h_a, SIZE_BYTES, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 
+#ifndef CSV_OUTPUT
     printf("Array Size: %d KB | Threads: %d | Spatial Stride: %d\n", SIZE_BYTES/1024, THREADS_PER_BLOCK, SPATIAL_STRIDE);
+    printf("Sleeping for 3 seconds to establish Idle Baseline...\n");
+#endif
 
     // 3. The Idle Power Baseline
-    printf("Sleeping for 3 seconds to establish Idle Baseline...\n");
     usleep(3000000);
-    
     unsigned int idle_power_mw = 0;
     nvmlDeviceGetPowerUsage(device, &idle_power_mw);
-    printf("Idle Power: %.2f W\n", idle_power_mw / 1000.0);
 
     // 4. Launch Kernel and Monitor Active Power
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
     keep_monitoring = true;
     std::thread monitor(monitor_power, device);
 
     dim3 Db(THREADS_PER_BLOCK, 1, 1);
     dim3 Dg(N_BLOCKS, 1, 1);
+
+    cudaEventRecord(start);
     load_data<<<Dg, Db>>>(d_a, subtabSize);
+    cudaEventRecord(stop);
+    
     cudaDeviceSynchronize();
 
     keep_monitoring = false;
     monitor.join();
 
-    // 5. Calculate Dynamic Energy
+    // 5. Calculate Time and Total Accesses
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    double seconds = milliseconds / 1000.0;
+
+    // 16 unrolled loads * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS
+    uint64_t total_accesses = (uint64_t)16 * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS;
+
+    // 6. Calculate Dynamic Energy
     double avg_active_power_w = (double)total_active_power / active_samples / 1000.0;
     double dynamic_power_w = avg_active_power_w - (idle_power_mw / 1000.0);
     
+    // Power (W) * Time (s) = Energy (Joules)
+    double dynamic_energy_j = dynamic_power_w * seconds;
+    double energy_per_access_j = dynamic_energy_j / total_accesses;
+    double energy_per_access_pj = energy_per_access_j * 1e12; // Picojoules
+
+#ifdef CSV_OUTPUT
+    // Print ONLY CSV data for the python script
+    printf("%d,%d,%e\n", SPATIAL_STRIDE, THREADS_PER_BLOCK, energy_per_access_pj);
+#else
+    // Print Human Readable output
+    printf("Idle Power: %.2f W\n", idle_power_mw / 1000.0);
+    printf("Kernel Time: %.4f seconds\n", seconds);
     printf("Avg Active Power: %.2f W\n", avg_active_power_w);
     printf("Dynamic Power (Isolated): %.2f W\n", dynamic_power_w);
+    printf("Total Accesses: %llu\n", (unsigned long long)total_accesses);
+    printf("Dynamic Energy: %e J\n", dynamic_energy_j);
+    printf("Energy per Access: %e J (%.2f pJ)\n", energy_per_access_j, energy_per_access_pj);
+#endif
 
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
     cudaFree(d_a);
     free(h_a);
     nvmlShutdown();

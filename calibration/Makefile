@@ -4,7 +4,7 @@ NVCC = nvcc
 CFLAGS = -O3 -arch=sm_89 -lnvidia-ml 
 TARGET = benchmark
 
-.PHONY: all compile lock unlock sweep clean
+.PHONY: all compile lock unlock sweep sweep_csv clean
 
 all: compile
 
@@ -20,8 +20,7 @@ unlock:
 	@echo "Unlocking GPU clock..."
 	sudo nvidia-smi --reset-gpu-clocks
 
-# Hardware Counter Verification & Sweep
-# Sweeps over different thread counts and spatial strides (coalescence levels)
+# Hardware Counter Verification & Sweep (Human Readable)
 sweep: lock
 	@echo "Starting Sweeps..."
 	@for stride in 1 4 16; do \
@@ -37,5 +36,19 @@ sweep: lock
 	done
 	@$(MAKE) unlock
 
+# Dedicated target for clean CSV generation (No NCU, no formatting)
+sweep_csv: lock
+	@echo "Starting CSV Sweep..."
+	@echo "Stride,ThreadsPerBlock,EnergyPerAccess" > results.csv
+	@for stride in 1 4 16; do \
+		for threads in 1 32 128 512 1024; do \
+			echo "Running THREADS=$$threads | STRIDE=$$stride..."; \
+			$(NVCC) $(CFLAGS) -DTHREADS_PER_BLOCK=$$threads -DSPATIAL_STRIDE=$$stride -DCSV_OUTPUT benchmark.cu -o $(TARGET); \
+			./$(TARGET) >> results.csv; \
+		done \
+	done
+	@$(MAKE) unlock
+	@echo "Sweep complete. Data saved to results.csv"
+
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) results.csv
