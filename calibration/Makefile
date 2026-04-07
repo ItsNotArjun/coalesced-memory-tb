@@ -20,8 +20,13 @@ unlock:
 	@echo "Unlocking GPU clock..."
 	sudo nvidia-smi --reset-gpu-clocks
 
+power_mode:
+	sudo nvidia-smi -pm 1
+
 # Hardware Counter Verification & Sweep (Human Readable)
-sweep: lock
+sweep:
+	power_mode
+	lock
 	@echo "Starting Sweeps..."
 	@for stride in 1 4 16; do \
 		for threads in 1 32 128 512 1024; do \
@@ -37,7 +42,9 @@ sweep: lock
 	@$(MAKE) unlock
 
 # Dedicated target for clean CSV generation (No NCU, no formatting)
-sweep_csv: lock
+sweep_csv:
+	power_mode
+	lock
 	@echo "Starting CSV Sweep..."
 	@echo "Stride,ThreadsPerBlock,EnergyPerAccess" > results.csv
 	@for stride in 1 4 16; do \
