@@ -9,8 +9,10 @@ def generate_graphs(csv_filename):
         return
 
     # Load the data
-    # We assume the columns are named exactly like this. Adjust if your headers differ.
     df = pd.read_csv(csv_filename, names=['Stride', 'ThreadsPerBlock', 'EnergyPerAccess'], header=0)
+
+    # UNCOMMENT THIS LINE if you want to flip your current negative data right-side up:
+    # df['EnergyPerAccess'] = df['EnergyPerAccess'].abs()
 
     # Get all unique stride lengths to create individual plots
     unique_strides = df['Stride'].unique()
@@ -37,8 +39,16 @@ def generate_graphs(csv_filename):
         
         # Formatting the graph
         plt.title(f'Energy per Access vs Threads per Block (Stride Length: {stride})')
+        
+        # 1. Update X-Axis to a log scale with exact specified markers
+        plt.xscale('log', base=2)
+        target_ticks = [1, 32, 128, 512, 1024]
+        plt.xticks(target_ticks, labels=[str(t) for t in target_ticks])
         plt.xlabel('Threads per Block')
-        plt.ylabel('Energy per Access')
+        
+        # 2. Update Y-Axis to include the exact units (pJ)
+        plt.ylabel('Energy per Access (pJ)')
+        
         plt.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.legend()
 
@@ -50,5 +60,4 @@ def generate_graphs(csv_filename):
         print(f"Saved graph: {output_path}")
 
 if __name__ == "__main__":
-    # Ensure your target CSV matches this filename
     generate_graphs('results.csv')

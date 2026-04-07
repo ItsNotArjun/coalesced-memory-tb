@@ -31,7 +31,7 @@
 #endif
 
 #ifndef N_BLOCKS
-#define N_BLOCKS 142 
+#define N_BLOCKS 284 
 #endif
 
 #ifndef REPEAT_SECOND_LOOP
