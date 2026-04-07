@@ -31,11 +31,11 @@
 #endif
 
 #ifndef N_BLOCKS
-#define N_BLOCKS 1
+#define N_BLOCKS 142 
 #endif
 
 #ifndef REPEAT_SECOND_LOOP
-#define REPEAT_SECOND_LOOP 10000 // High iteration count for stable power reading
+#define REPEAT_SECOND_LOOP 100 // High iteration count for stable power reading
 #endif
 
 #ifndef GPU_ID
