@@ -1,0 +1,302 @@
+rm -f cache_probe results/*.csv results/*.txt
+nvcc -O2 -arch=sm_90 -Xcompiler -Wall -lineinfo                      cache_probe.cu -o cache_probe
+cache_probe.cu(411): warning #550-D: variable "sub_array_bytes" was set but never used
+      int sub_array_bytes = 0;
+          ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+cache_probe.cu(497): warning #177-D: variable "l1_size_driver" was declared but never referenced
+      uint64_t l1_size_driver = 0;
+               ^
+
+cache_probe.cu: In function ‘int main(int, char**)’:
+cache_probe.cu:411:5: warning: variable ‘sub_array_bytes’ set but not used [-Wunused-but-set-variable]
+     int sub_array_bytes = 0;
+     ^~~~~~~~~~~~~~~
+Built: cache_probe  (arch=sm_90)
+./cache_probe \
+	--min-kb 1    \
+	--max-gb 2    \
+	--steps  100  \
+	--iters  5    \
+	--threads 1024 \
+	--blocks  132
+  ncu failed for size 1024 B; using synthetic estimate.
+=================================================
+ GPU Cache Size Identification Tool
+ Based on: Delestrac et al. ASAP 2024, Section V-A
+=================================================
+ Device  : NVIDIA H100 80GB HBM3
+ SM count: 132
+ VRAM    : 79.2 GiB
+ L2 size : 50.0 MiB (reported by driver)
+-------------------------------------------------
+ Sweep   : [1024 B .. 2147483648 B], 100 steps
+ Threads : 1024 per block, 132 blocks
+ Iters   : 5
+=================================================
+
+Warming up GPU...
+Done.
+
+Step    Array size      L1 miss%    L2 miss%    Region    
+------  --------------  ----------  ----------  ----------
+1       1.0 KB          0.0         0.0       
+2       1.2 KB          0.0         0.0       
+3       1.4 KB          0.0         0.0       
+4       1.6 KB          0.0         0.0       
+5       1.9 KB          0.0         0.0       
+6       2.1 KB          0.0         0.0       
+7       2.5 KB          0.0         0.0       
+8       2.9 KB          0.0         0.0       
+9       3.2 KB          0.0         0.0       
+10      3.9 KB          0.0         0.0       
+11      4.4 KB          0.0         0.0       
+12      5.1 KB          0.0         0.0       
+13      5.9 KB          0.0         0.0       
+14      6.9 KB          0.0         0.0       
+15      7.9 KB          0.0         0.0       
+16      9.1 KB          0.0         0.0       
+17      10.6 KB         0.0         0.0       
+18      12.2 KB         0.0         0.0       
+19      14.1 KB         0.0         0.0       
+20      16.4 KB         0.0         0.0       
+21      19.0 KB         0.0         0.0       
+22      22.0 KB         0.0         0.0       
+23      25.5 KB         0.0         0.0       
+24      29.5 KB         0.0         0.0       
+25      34.1 KB         0.0         0.0       
+26      39.5 KB         0.0         0.0       
+27      45.8 KB         0.0         0.0       
+28      53.0 KB         0.0         0.0       
+29      61.4 KB         0.0         0.0       
+30      71.1 KB         0.0         0.0       
+31      82.4 KB         0.0         0.0       
+32      95.5 KB         0.0         0.0       
+33      110.5 KB        0.0         0.0       
+34      128.0 KB        0.0         0.0       
+35      148.4 KB        0.0         0.0       
+36      171.9 KB        0.0         0.0       
+37      199.0 KB        0.0         0.0       
+38      230.5 KB        0.0         0.0       
+39      267.0 KB        0.0         0.0       
+40      309.4 KB        0.1         0.0       
+41      358.4 KB        0.6         0.0       
+42      415.0 KB        4.6         0.0       
+43      480.8 KB        28.7        0.0       
+44      556.9 KB        77.1        0.0       
+45      645.1 KB        96.6        0.0       
+46      747.4 KB        99.6        0.0       
+47      865.6 KB        99.9        0.0       
+48      1002.8 KB       100.0       0.0       
+49      1.13 MB         100.0       0.0       
+50      1.31 MB         100.0       0.0       
+51      1.52 MB         100.0       0.0       
+52      1.76 MB         100.0       0.0       
+53      2.04 MB         100.0       0.0       
+54      2.37 MB         100.0       0.0       
+55      2.74 MB         100.0       0.0       
+56      3.17 MB         100.0       0.0       
+57      3.68 MB         100.0       0.0       
+58      4.26 MB         100.0       0.0       
+59      4.93 MB         100.0       0.0       
+60      5.72 MB         100.0       0.0       
+61      6.62 MB         100.0       0.0       
+62      7.67 MB         100.0       0.0       
+63      8.89 MB         100.0       0.0       
+64      10.29 MB        100.0       0.0       
+65      11.92 MB        100.0       0.0       
+66      13.81 MB        100.0       0.0       
+67      16.00 MB        100.0       0.0       
+68      18.53 MB        100.0       0.0       
+69      21.47 MB        100.0       0.0       
+70      24.87 MB        100.0       0.0       
+71      28.81 MB        100.0       0.0       
+72      33.37 MB        100.0       0.3       
+73      38.66 MB        100.0       2.4       
+74      44.78 MB        100.0       16.9      
+75      51.88 MB        100.0       63.0      
+76      60.09 MB        100.0       93.4      
+77      69.61 MB        100.0       99.2      
+78      80.64 MB        100.0       99.9      
+79      93.41 MB        100.0       100.0     
+80      108.20 MB       100.0       100.0     
+81      125.34 MB       100.0       100.0     
+82      145.19 MB       100.0       100.0     
+83      168.19 MB       100.0       100.0     
+84      194.83 MB       100.0       100.0     
+85      225.69 MB       100.0       100.0     
+86      261.43 MB       100.0       100.0     
+87      302.84 MB       100.0       100.0     
+88      350.81 MB       100.0       100.0     
+89      406.37 MB       100.0       100.0     
+90      470.74 MB       100.0       100.0     
+91      545.30 MB       100.0       100.0     
+92      631.67 MB       100.0       100.0     
+93      731.72 MB       100.0       100.0     
+94      847.62 MB       100.0       100.0     
+95      981.87 MB       100.0       100.0     
+96      1.11 GB         100.0       100.0     
+97      1.29 GB         100.0       100.0     
+98      1.49 GB         100.0       100.0     
+99      1.73 GB         100.0       100.0     
+100     2.00 GB         100.0       100.0     
+
+-------------------------------------------------
+ CACHE SIZE ESTIMATES (miss rate ≥ 50% threshold)
+-------------------------------------------------
+ L1: 570240 B  =  556.9 KB  =  0.54 MB
+ L2: 54395008 B  =  53120.1 KB  =  51.88 MB
+ L2 (driver-reported): 50.0 MB
+-------------------------------------------------
+
+Results written to: results/cache_miss_rates.csv
+python3 analyze_cache.py --csv results/cache_miss_rates.csv --verbose
+Loading results/cache_miss_rates.csv ...
+  Loaded 100 measurement points.
+
+--- Detected Boundaries ---
+  L1  threshold-50=514.2 KB  (526,587 bytes)  inflection=480.8 KB  (492,288 bytes)  confidence=HIGH
+  L2  threshold-50=49.875 MB  (52,298,143 bytes)  inflection=51.875 MB  (54,395,008 bytes)  confidence=HIGH
+Summary CSV written to: results/cache_analysis_summary.csv
+Report written to: results/cache_analysis_report.txt
+
+--- Full Data ---
+        Size   L1 miss   L2 miss  Region
+        1024       0.0       0.0  L1_range
+        1280       0.0       0.0  L1_range
+        1408       0.0       0.0  L1_range
+        1664       0.0       0.0  L1_range
+        1920       0.0       0.0  L1_range
+        2176       0.0       0.0  L1_range
+        2560       0.0       0.0  L1_range
+        2944       0.0       0.0  L1_range
+        3328       0.0       0.0  L1_range
+        3968       0.0       0.0  L1_range
+        4480       0.0       0.0  L1_range
+        5248       0.0       0.0  L1_range
+        6016       0.0       0.0  L1_range
+        7040       0.0       0.0  L1_range
+        8064       0.0       0.0  L1_range
+        9344       0.0       0.0  L1_range
+       10880       0.0       0.0  L1_range
+       12544       0.0       0.0  L1_range
+       14464       0.0       0.0  L1_range
+       16768       0.0       0.0  L1_range
+       19456       0.0       0.0  L1_range
+       22528       0.0       0.0  L1_range
+       26112       0.0       0.0  L1_range
+       30208       0.0       0.0  L1_range
+       34944       0.0       0.0  L1_range
+       40448       0.0       0.0  L1_range
+       46848       0.0       0.0  L1_range
+       54272       0.0       0.0  L1_range
+       62848       0.0       0.0  L1_range
+       72832       0.0       0.0  L1_range
+       84352       0.0       0.0  L1_range
+       97792       0.0       0.0  L1_range
+      113152       0.0       0.0  L1_range
+      131072       0.0       0.0  L1_range
+      151936       0.0       0.0  L1_range
+      176000       0.0       0.0  L1_range
+      203776       0.0       0.0  L1_range
+      236032       0.0       0.0  L1_range
+      273408       0.0       0.0  L1_range
+      316800       0.1       0.0  L1_range
+      366976       0.6       0.0  L1_range
+      424960       4.6       0.0  L1_range
+      492288      28.7       0.0  L1_range
+      570240      77.1       0.0  L2_range
+      660608      96.6       0.0  L2_range
+      765312      99.6       0.0  L2_range
+      886400     100.0       0.0  L2_range
+     1026816     100.0       0.0  L2_range
+     1189504     100.0       0.0  L2_range
+     1377920     100.0       0.0  L2_range
+     1596160     100.0       0.0  L2_range
+     1848832     100.0       0.0  L2_range
+     2141696     100.0       0.0  L2_range
+     2480896     100.0       0.0  L2_range
+     2873856     100.0       0.0  L2_range
+     3329024     100.0       0.0  L2_range
+     3856384     100.0       0.0  L2_range
+     4467200     100.0       0.0  L2_range
+     5174656     100.0       0.0  L2_range
+     5994368     100.0       0.0  L2_range
+     6943744     100.0       0.0  L2_range
+     8043520     100.0       0.0  L2_range
+     9317632     100.0       0.0  L2_range
+    10793344     100.0       0.0  L2_range
+    12502912     100.0       0.0  L2_range
+    14483328     100.0       0.0  L2_range
+    16777216     100.0       0.0  L2_range
+    19434624     100.0       0.0  L2_range
+    22512896     100.0       0.0  L2_range
+    26078720     100.0       0.0  L2_range
+    30209280     100.0       0.0  L2_range
+    34994048     100.0       0.3  L2_range
+    40536832     100.0       2.4  L2_range
+    46957440     100.0      16.9  L2_range
+    54395008     100.0      63.0  DRAM_range
+    63010688     100.0      93.4  DRAM_range
+    72990848     100.0      99.2  DRAM_range
+    84551936     100.0      99.9  DRAM_range
+    97944064     100.0     100.0  DRAM_range
+   113457536     100.0     100.0  DRAM_range
+   131427968     100.0     100.0  DRAM_range
+   152244864     100.0     100.0  DRAM_range
+   176359040     100.0     100.0  DRAM_range
+   204292480     100.0     100.0  DRAM_range
+   236650368     100.0     100.0  DRAM_range
+   274133504     100.0     100.0  DRAM_range
+   317553536     100.0     100.0  DRAM_range
+   367850880     100.0     100.0  DRAM_range
+   426114816     100.0     100.0  DRAM_range
+   493607168     100.0     100.0  DRAM_range
+   571789696     100.0     100.0  DRAM_range
+   662355456     100.0     100.0  DRAM_range
+   767266048     100.0     100.0  DRAM_range
+   888793344     100.0     100.0  DRAM_range
+  1029569408     100.0     100.0  DRAM_range
+  1192643072     100.0     100.0  DRAM_range
+  1381545984     100.0     100.0  DRAM_range
+  1600369152     100.0     100.0  DRAM_range
+  1853851904     100.0     100.0  DRAM_range
+  2147483648     100.0     100.0  DRAM_range
+python3 plot_cache_miss_rates.py --no-pdf --dpi 150
+Saved: results/cache_miss_rates.png
+
+--- Detected Cache Boundaries (50% miss-rate threshold) ---
+  L1 : 514 KB
+  L2 : 50 MB
+rm -f benchmark results.csv
+Enabling Persistence Mode and Locking GPU clock to 1065 MHz...
+nvidia-smi -pm 1
+Unable to set persistence mode for GPU 00000000:E3:00.0: Insufficient Permissions
+Enabled persistence mode via daemon for GPU 00000000:E3:00.0.
+All done.
+Starting CSV Sweep...
+Running THREADS=1 | STRIDE=1...
+Running THREADS=32 | STRIDE=1...
+Running THREADS=128 | STRIDE=1...
+Running THREADS=512 | STRIDE=1...
+Running THREADS=1024 | STRIDE=1...
+Running THREADS=1 | STRIDE=4...
+Running THREADS=32 | STRIDE=4...
+Running THREADS=128 | STRIDE=4...
+Running THREADS=512 | STRIDE=4...
+Running THREADS=1024 | STRIDE=4...
+Running THREADS=1 | STRIDE=16...
+Running THREADS=32 | STRIDE=16...
+Running THREADS=128 | STRIDE=16...
+Running THREADS=512 | STRIDE=16...
+Running THREADS=1024 | STRIDE=16...
+make[1]: Entering directory '/home/gargia/coalesced-memory-tb/calibration'
+Unlocking GPU clock...
+make[1]: Leaving directory '/home/gargia/coalesced-memory-tb/calibration'
+Sweep complete. Data saved to results.csv
+Found data for 3 different stride lengths: [ 1  4 16]
+Saved graph: energy_graphs/stride_1_plot.png
+Saved graph: energy_graphs/stride_4_plot.png
+Saved graph: energy_graphs/stride_16_plot.png
