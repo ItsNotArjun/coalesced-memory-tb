@@ -9,7 +9,7 @@
 #include <nvml.h>
 
 // --- RTX 5000 Ada Defaults ---
-// L1 Cache is 128KB per SM. We use 100KB to guarantee we don't spill into L2.
+// L1 Cache is 228KB per SM. We use 100KB to guarantee we don't spill into L2.
 #ifndef SIZE_BYTES
 #define SIZE_BYTES (100 * 1024) 
 #endif
@@ -31,7 +31,7 @@
 #endif
 
 #ifndef N_BLOCKS
-#define N_BLOCKS 284
+#define N_BLOCKS 264
 #endif
 
 #ifndef REPEAT_SECOND_LOOP

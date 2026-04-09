@@ -15,7 +15,7 @@ PYTHON      := python3
 #   sm_86  = Ampere RTX 30xx / A6000
 #   sm_89  = Ada Lovelace RTX 40xx
 #   sm_90  = Hopper H100
-ARCH        := sm_80
+ARCH        := sm_90
 
 # ── Flags ──────────────────────────────────────────────────────────────────
 NVCC_FLAGS  := -O2 -arch=$(ARCH) -Xcompiler -Wall
@@ -61,6 +61,17 @@ run-a100: $(TARGET)
 	    --iters  5    \
 	    --threads 1024 \
 	    --blocks  4
+
+# ── H100-specific run (228 kB L1, 50 MB L2, 80 GB DRAM) ─────────────
+run-h100: $(TARGET)
+	@mkdir -p results
+	./$(TARGET) \
+		--min-kb 1    \
+		--max-gb 2    \
+		--steps  100  \
+		--iters  5    \
+		--threads 1024 \
+		--blocks  132
 
 # ── Clean ──────────────────────────────────────────────────────────────────
 clean:

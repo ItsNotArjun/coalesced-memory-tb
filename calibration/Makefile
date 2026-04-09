@@ -1,17 +1,18 @@
-# Default RTX 5000 Ada Base Clock
-CLOCK_SPEED ?= 1155
+# --- H100 HOPPER DEFAULTS ---
+# Base clock for this specific H100 node is 1065 MHz (from nvidia-smi -q -d CLOCK)
+CLOCK_SPEED ?= 1065
 NVCC = nvcc
-CFLAGS = -O3 -arch=sm_89 -lnvidia-ml 
+CFLAGS = -O3 -arch=sm_90 -lnvidia-ml 
 TARGET = benchmark
 
 # --- PHYSICS & TIMING SETTINGS ---
-# 142 SMs on the RTX 5000 Ada. 284 blocks guarantees chip saturation.
-BLOCKS ?= 284
+# 132 SMs on the H100 (SXM). 264 blocks guarantees 100% chip saturation.
+BLOCKS ?= 264
 
 # Keep loops tiny for NCU so the profiler doesn't crash (TDR timeout)
 NCU_LOOPS ?= 100
 
-# Make loops MASSIVE for CSV so NVML has 15+ seconds to average out the background noise
+# Make loops MASSIVE for CSV so NVML has 15+ seconds to average out the 700W background noise
 CSV_LOOPS ?= 500000
 
 .PHONY: all compile lock unlock sweep sweep_csv clean
@@ -24,12 +25,12 @@ compile:
 
 lock:
 	@echo "Enabling Persistence Mode and Locking GPU clock to $(CLOCK_SPEED) MHz..."
-	sudo nvidia-smi -pm 1
-	sudo nvidia-smi --lock-gpu-clocks=$(CLOCK_SPEED),$(CLOCK_SPEED)
+	nvidia-smi -pm 1
+# 	sudo nvidia-smi --lock-gpu-clocks=$(CLOCK_SPEED),$(CLOCK_SPEED)
 
 unlock:
 	@echo "Unlocking GPU clock..."
-	sudo nvidia-smi --reset-gpu-clocks
+# 	sudo nvidia-smi --reset-gpu-clocks
 
 # Hardware Counter Verification & Sweep (Human Readable, FAST)
 sweep: lock

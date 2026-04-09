@@ -12,8 +12,8 @@
  * Outputs: results/cache_miss_rates.csv
  *
  * Build:
- *   nvcc -O2 -arch=sm_80 cache_probe.cu -o cache_probe
- *   (Change -arch to match your GPU: sm_70=V100, sm_80=A100, sm_86=RTX3090)
+ * nvcc -O2 -arch=sm_90 cache_probe.cu -o cache_probe
+ * (Change -arch to match your GPU: sm_70=V100, sm_80=A100, sm_89=Ada, sm_90=H100)
  *
  * Run:
  *   ./cache_probe
@@ -30,7 +30,7 @@
 
 /* ─────────────────────────── defaults ────────────────────────────────────── */
 #define DEFAULT_MIN_BYTES   (1024ULL)           /* 1 KB  */
-#define DEFAULT_MAX_BYTES   (1ULL << 30)        /* 1 GB  */
+#define DEFAULT_MAX_BYTES   (2ULL << 30)        /* 1 GB  */
 #define DEFAULT_STEPS       60                  /* array sizes to sweep        */
 #define DEFAULT_ITERS       5                   /* kernel launches per point   */
 #define DEFAULT_THREADS     256                 /* threads per block           */
