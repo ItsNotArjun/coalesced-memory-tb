@@ -31,7 +31,7 @@
 #endif
 
 #ifndef N_BLOCKS
-#define N_BLOCKS 284 
+#define N_BLOCKS 284
 #endif
 
 #ifndef REPEAT_SECOND_LOOP
@@ -161,8 +161,11 @@ int main() {
     cudaEventElapsedTime(&milliseconds, start, stop);
     double seconds = milliseconds / 1000.0;
 
+
+    uint64_t cycle_length = subtabSize / CHASE_JUMP;
     // 16 unrolled loads * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS
-    uint64_t total_accesses = (uint64_t)16 * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS;
+    // uint64_t total_accesses = (uint64_t)16 * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS;
+    uint64_t total_accesses = cycle_length * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS;
 
     // 6. Calculate Dynamic Energy
     double avg_active_power_w = (double)total_active_power / active_samples / 1000.0;

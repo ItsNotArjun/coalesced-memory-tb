@@ -12,7 +12,7 @@ BLOCKS ?= 284
 NCU_LOOPS ?= 100
 
 # Make loops MASSIVE for CSV so NVML has 15+ seconds to average out the background noise
-CSV_LOOPS ?= 500
+CSV_LOOPS ?= 500000
 
 .PHONY: all compile lock unlock sweep sweep_csv clean
 
