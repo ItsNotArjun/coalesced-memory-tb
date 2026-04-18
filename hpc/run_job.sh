@@ -6,6 +6,8 @@
 #SBATCH --time=24:00:00
 #SBATCH --output=job_output_%j.txt
 
+set -euo pipefail
+
 # 1. Manually add CUDA to the path (adjust the path if your 'ls' command found a specific version like cuda-12.1)
 export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
@@ -23,5 +25,7 @@ make analyze
 cd /home/gargia/coalesced-memory-tb/calibration
 
 make clean
-make sweep_csv BLOCKS=264
+make sweep_csv BLOCKS=264 THREADS=256
+make sweep_ncu BLOCKS=264 THREADS=256
+make analyze_metrics
 python plot_energy.py
