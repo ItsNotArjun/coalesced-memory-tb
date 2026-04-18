@@ -35,8 +35,20 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--kernel-name",
-        default="measure_data",
-        help="Kernel name filter for Nsight Compute",
+        default="",
+        help="Optional kernel-name filter for Nsight Compute (leave empty to profile by launch index)",
+    )
+    parser.add_argument(
+        "--launch-skip",
+        type=int,
+        default=1,
+        help="Number of kernel launches to skip before profiling (default: 1 to skip warmup_data)",
+    )
+    parser.add_argument(
+        "--launch-count",
+        type=int,
+        default=1,
+        help="Number of launches to profile after skip (default: 1)",
     )
     return parser.parse_args()
 
@@ -90,12 +102,18 @@ def main() -> int:
         "--csv",
         "--page",
         "raw",
-        "--kernel-name",
-        args.kernel_name,
+        "--target-processes",
+        "all",
+        "--launch-skip",
+        str(args.launch_skip),
+        "--launch-count",
+        str(args.launch_count),
         "--metrics",
         ",".join(metric_names),
-        args.binary,
     ]
+    if args.kernel_name:
+        cmd.extend(["--kernel-name-base", "demangled", "--kernel-name", args.kernel_name])
+    cmd.append(args.binary)
 
     proc = subprocess.run(cmd, capture_output=True, text=True)
     raw_output = proc.stdout + ("\n" + proc.stderr if proc.stderr else "")
@@ -108,6 +126,8 @@ def main() -> int:
     status = "ok"
     if proc.returncode != 0:
         status = f"ncu_failed_{proc.returncode}"
+    if status == "ok" and "no kernels were profiled" in raw_output.lower():
+        status = "no_kernels_profiled"
 
     metrics = parse_metric_rows(raw_output, metric_names)
 

@@ -20,6 +20,8 @@ RANDOM_STRIDE ?= 1
 
 # Keep loops tiny for NCU so the profiler doesn't crash (TDR timeout)
 NCU_LOOPS ?= 100
+NCU_LAUNCH_SKIP ?= 1
+NCU_LAUNCH_COUNT ?= 1
 
 # Make loops MASSIVE for CSV so NVML has 15+ seconds to average out the 700W background noise
 CSV_LOOPS ?= 500000
@@ -94,12 +96,12 @@ sweep_ncu: lock
 		if [ $$mode -eq 0 ]; then stride=$(BASELINE_STRIDE); else stride=$(RANDOM_STRIDE); fi; \
 		echo "Profiling MODE=$$mode | THREADS=$(THREADS) | STRIDE=$$stride..."; \
 		$(NVCC) $(CFLAGS) -DMODE=$$mode -DTHREADS_PER_BLOCK=$(THREADS) -DSPATIAL_STRIDE=$$stride -DN_BLOCKS=$(BLOCKS) -DREPEAT_SECOND_LOOP=$(NCU_LOOPS) benchmark.cu -o $(TARGET); \
-		$(PYTHON) collect_ncu_metrics.py --binary ./$(TARGET) --mode $$mode --stride $$stride --threads $(THREADS) --metrics "$(NCU_METRICS)" --out ncu_metrics.csv --raw-log ncu_raw/mode$${mode}_stride$${stride}.csv; \
+		$(PYTHON) collect_ncu_metrics.py --binary ./$(TARGET) --mode $$mode --stride $$stride --threads $(THREADS) --metrics "$(NCU_METRICS)" --launch-skip $(NCU_LAUNCH_SKIP) --launch-count $(NCU_LAUNCH_COUNT) --out ncu_metrics.csv --raw-log ncu_raw/mode$${mode}_stride$${stride}.csv; \
 	done
 	@for stride in $(DISORDER_STRIDES); do \
 		echo "Profiling MODE=1 | THREADS=$(THREADS) | STRIDE=$$stride..."; \
 		$(NVCC) $(CFLAGS) -DMODE=1 -DTHREADS_PER_BLOCK=$(THREADS) -DSPATIAL_STRIDE=$$stride -DN_BLOCKS=$(BLOCKS) -DREPEAT_SECOND_LOOP=$(NCU_LOOPS) benchmark.cu -o $(TARGET); \
-		$(PYTHON) collect_ncu_metrics.py --binary ./$(TARGET) --mode 1 --stride $$stride --threads $(THREADS) --metrics "$(NCU_METRICS)" --out ncu_metrics.csv --raw-log ncu_raw/mode1_stride$${stride}.csv; \
+		$(PYTHON) collect_ncu_metrics.py --binary ./$(TARGET) --mode 1 --stride $$stride --threads $(THREADS) --metrics "$(NCU_METRICS)" --launch-skip $(NCU_LAUNCH_SKIP) --launch-count $(NCU_LAUNCH_COUNT) --out ncu_metrics.csv --raw-log ncu_raw/mode1_stride$${stride}.csv; \
 	done
 	@$(MAKE) unlock
 	@echo "NCU sweep complete. Data saved to ncu_metrics.csv"

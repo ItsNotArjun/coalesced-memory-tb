@@ -78,6 +78,7 @@ void monitor_power(nvmlDevice_t device) {
     }
 }
 
+#ifndef CSV_OUTPUT
 static const char *mode_name() {
 #if MODE == 0
     return "coalesced";
@@ -87,6 +88,7 @@ static const char *mode_name() {
     return "random";
 #endif
 }
+#endif
 
 static uint64_t gcd_u64(uint64_t a, uint64_t b) {
     while (b != 0) {
