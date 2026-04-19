@@ -8,10 +8,26 @@
 #include <cuda_runtime.h>
 #include <nvml.h>
 
-// --- RTX 5000 Ada Defaults ---
-// L1 Cache is 228KB per SM. We use 100KB to guarantee we don't spill into L2.
-#ifndef SIZE_BYTES
-#define SIZE_BYTES (100 * 1024) 
+// 1 = L1 Cache, 2 = L2 Cache, 3 = DRAM
+#ifndef MEM_LEVEL
+#define MEM_LEVEL 1 
+#endif
+
+// --- H100 Architecture Memory Sizing ---
+#if MEM_LEVEL == 1
+    #define SIZE_BYTES (100ULL * 1024ULL)             // 100 KB (Easily fits in 228KB L1)
+    #define MEM_NAME "L1"
+    #define LOOP_SCALE 1                              // Baseline loops
+#elif MEM_LEVEL == 2
+    #define SIZE_BYTES (20ULL * 1024ULL * 1024ULL)    // 20 MB (Overflows L1, fits in 50MB L2)
+    #define MEM_NAME "L2"
+    #define LOOP_SCALE 200                            // Array is ~200x larger than L1
+#elif MEM_LEVEL == 3
+    #define SIZE_BYTES (150ULL * 1024ULL * 1024ULL)   // 150 MB (Overflows the 50MB L2)
+    #define MEM_NAME "DRAM"
+    #define LOOP_SCALE 1500                           // Array is ~1500x larger than L1
+#else
+    #error "Invalid MEM_LEVEL. Must be 1, 2, or 3."
 #endif
 
 // The pointer-chasing jump size (4 uint64_t = 32 bytes = 1 sector)
@@ -20,8 +36,6 @@
 #endif
 
 // Determines Coalescence. 
-// 1 = Fully coalesced (adjacent threads access adjacent 8-byte blocks)
-// 4 = Uncoalesced (adjacent threads access memory 32-bytes apart)
 #ifndef SPATIAL_STRIDE
 #define SPATIAL_STRIDE 1 
 #endif
@@ -34,9 +48,12 @@
 #define N_BLOCKS 264
 #endif
 
+// We scale down the user-provided loops based on array size so execution time remains ~15 seconds.
+// The ternary operator ensures it never drops below 1 loop for NCU testing.
 #ifndef REPEAT_SECOND_LOOP
-#define REPEAT_SECOND_LOOP 100 // High iteration count for stable power reading
+#define REPEAT_SECOND_LOOP 100
 #endif
+#define ACTUAL_LOOPS ((REPEAT_SECOND_LOOP / LOOP_SCALE) > 0 ? (REPEAT_SECOND_LOOP / LOOP_SCALE) : 1)
 
 #ifndef GPU_ID
 #define GPU_ID 0
@@ -62,7 +79,6 @@ __global__ void load_data(uint64_t *my_array, uint64_t subtabSize) {
     uint64_t tid = threadIdx.x;
     
     // CPU initialized the pointers. We just offset the starting point to vary coalescence.
-    // The modulo ensures we never access memory outside the 100KB L1 footprint.
     uint64_t start_idx = (tid * SPATIAL_STRIDE) % subtabSize;
     uint64_t *start_addr = my_array + start_idx;
 
@@ -72,14 +88,14 @@ __global__ void load_data(uint64_t *my_array, uint64_t subtabSize) {
         ".reg .u64 %tmp;\n"
         "mov.u64 %tmp, %0;\n\n"
 
-        // WARMUP: Pull data into L1 Cache
+        // WARMUP: Pull data into highest possible cache level
         "$warmup_loop:\n"
         "ld.global.ca.u64 %tmp, [%tmp];\n"
         "setp.ne.u64 %p, %tmp, %0;\n" 
         "@%p bra $warmup_loop;\n"
         "bar.sync 0;\n" 
 
-        // MEASUREMENT: All accesses here should be L1 Hits
+        // MEASUREMENT: All accesses here target the intended MEM_LEVEL
         ".reg .u32 %k;\n"             
         "mov.u32 %k, 0;\n"
         "mov.u64 %tmp, %0;\n\n"
@@ -100,7 +116,7 @@ __global__ void load_data(uint64_t *my_array, uint64_t subtabSize) {
         "add.u32 %k, %k, 1;\n"
         "setp.lt.u32 %p, %k, %1;\n"
         "@%p bra $start;\n"
-        "}" : "+l"(start_addr) : "n"(REPEAT_SECOND_LOOP));
+        "}" : "+l"(start_addr) : "n"(ACTUAL_LOOPS));
 }
 
 int main() {
@@ -109,7 +125,6 @@ int main() {
     nvmlDevice_t device;
     nvmlDeviceGetHandleByIndex(GPU_ID, &device);
 
-    // 1. Set Access Granularities (Minimum 32 Bytes)
     cudaFuncSetAttribute(load_data, cudaFuncAttributePreferredSharedMemoryCarveout, 0);
     cudaDeviceSetLimit(cudaLimitMaxL2FetchGranularity, 32);
     cudaDeviceSetLimit(cudaLimitPersistingL2CacheSize, 0);
@@ -119,7 +134,6 @@ int main() {
     uint64_t *d_a;
     cudaMalloc((void **)&d_a, SIZE_BYTES);
 
-    // 2. CPU-Side Pointer Initialization (Bake the Chase Jump)
     for (uint64_t i = 0; i < subtabSize; i++) {
         h_a[i] = (uint64_t)(d_a + ((i + CHASE_JUMP) % subtabSize));
     }
@@ -127,16 +141,14 @@ int main() {
     cudaDeviceSynchronize();
 
 #ifndef CSV_OUTPUT
-    printf("Array Size: %d KB | Threads: %d | Spatial Stride: %d\n", SIZE_BYTES/1024, THREADS_PER_BLOCK, SPATIAL_STRIDE);
+    printf("Target: %s | Array Size: %llu MB | Threads: %d | Spatial Stride: %d\n", MEM_NAME, SIZE_BYTES/(1024*1024), THREADS_PER_BLOCK, SPATIAL_STRIDE);
     printf("Sleeping for 3 seconds to establish Idle Baseline...\n");
 #endif
 
-    // 3. The Idle Power Baseline
     usleep(3000000);
     unsigned int idle_power_mw = 0;
     nvmlDeviceGetPowerUsage(device, &idle_power_mw);
 
-    // 4. Launch Kernel and Monitor Active Power
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
@@ -156,31 +168,25 @@ int main() {
     keep_monitoring = false;
     monitor.join();
 
-    // 5. Calculate Time and Total Accesses
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
     double seconds = milliseconds / 1000.0;
 
-
     uint64_t cycle_length = subtabSize / CHASE_JUMP;
-    // 16 unrolled loads * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS
-    // uint64_t total_accesses = (uint64_t)16 * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS;
-    uint64_t total_accesses = cycle_length * REPEAT_SECOND_LOOP * THREADS_PER_BLOCK * N_BLOCKS;
+    // Uses ACTUAL_LOOPS rather than REPEAT_SECOND_LOOP for accurate math
+    uint64_t total_accesses = cycle_length * ACTUAL_LOOPS * THREADS_PER_BLOCK * N_BLOCKS;
 
-    // 6. Calculate Dynamic Energy
     double avg_active_power_w = (double)total_active_power / active_samples / 1000.0;
     double dynamic_power_w = avg_active_power_w - (idle_power_mw / 1000.0);
     
-    // Power (W) * Time (s) = Energy (Joules)
     double dynamic_energy_j = dynamic_power_w * seconds;
     double energy_per_access_j = dynamic_energy_j / total_accesses;
-    double energy_per_access_pj = energy_per_access_j * 1e12; // Picojoules
+    double energy_per_access_pj = energy_per_access_j * 1e12; 
 
 #ifdef CSV_OUTPUT
-    // Print ONLY CSV data for the python script
-    printf("%d,%d,%e\n", SPATIAL_STRIDE, THREADS_PER_BLOCK, energy_per_access_pj);
+    // Added %s for MEM_NAME so you can distinguish L1 vs L2 vs DRAM in your CSV
+    printf("%s,%d,%d,%e\n", MEM_NAME, SPATIAL_STRIDE, THREADS_PER_BLOCK, energy_per_access_pj);
 #else
-    // Print Human Readable output
     printf("Idle Power: %.2f W\n", idle_power_mw / 1000.0);
     printf("Kernel Time: %.4f seconds\n", seconds);
     printf("Avg Active Power: %.2f W\n", avg_active_power_w);
