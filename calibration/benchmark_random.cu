@@ -16,17 +16,17 @@
 
 // --- H100 Architecture Memory Sizing ---
 #if MEM_LEVEL == 1
-    #define SIZE_BYTES (100ULL * 1024ULL)             // 100 KB
+    #define SIZE_BYTES (100ULL * 1024ULL)             // 100 KB (Easily fits in 228KB L1)
     #define MEM_NAME "L1"
-    #define LOOP_SCALE 1                              
+    #define LOOP_SCALE 1                              // Baseline loops
 #elif MEM_LEVEL == 2
-    #define SIZE_BYTES (20ULL * 1024ULL * 1024ULL)    // 20 MB
+    #define SIZE_BYTES (20ULL * 1024ULL * 1024ULL)    // 20 MB (Overflows L1, fits in 50MB L2)
     #define MEM_NAME "L2"
-    #define LOOP_SCALE 200                            
+    #define LOOP_SCALE 200                            // Array is ~200x larger than L1
 #elif MEM_LEVEL == 3
-    #define SIZE_BYTES (150ULL * 1024ULL * 1024ULL)   // 150 MB
+    #define SIZE_BYTES (150ULL * 1024ULL * 1024ULL)   // 150 MB (Overflows the 50MB L2)
     #define MEM_NAME "DRAM"
-    #define LOOP_SCALE 1500                           
+    #define LOOP_SCALE 1500                           // Array is ~1500x larger than L1
 #else
     #error "Invalid MEM_LEVEL. Must be 1, 2, or 3."
 #endif
@@ -113,7 +113,7 @@ __global__ void load_data(uint64_t *my_array, uint64_t subtabSize) {
         "ld.global.ca.u64 %tmp, [%tmp];\n" "ld.global.ca.u64 %tmp, [%tmp];\n"
         "ld.global.ca.u64 %tmp, [%tmp];\n" "ld.global.ca.u64 %tmp, [%tmp];\n"
         "ld.global.ca.u64 %tmp, [%tmp];\n" "ld.global.ca.u64 %tmp, [%tmp];\n"
-        
+
         "setp.ne.u64 %p, %tmp, %0;\n" 
         "@%p bra $start;\n"
         "add.u32 %k, %k, 1;\n"

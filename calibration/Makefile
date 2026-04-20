@@ -54,9 +54,9 @@ sweep: lock
 	@$(MAKE) unlock
 
 # Dedicated target for clean CSV generation (LONG execution for stable power averages)
-sweep_csv: lock
+sweep_csv_optimized: lock
 	@echo "Starting Optimizer CSV Sweep ..."
-	@echo "Memory,Stride,ThreadsPerBlock,EnergyPerAccess" > results_optimizer.csv
+	@echo "Memory,Stride,ThreadsPerBlock,EnergyPerAccess" > results_optimized.csv
 	@for mem in 1 2 3; do \
 		for stride in 1 4 16; do \
 			for threads in 1 32 128 512 1024; do \
@@ -65,11 +65,15 @@ sweep_csv: lock
 				\
 				echo "Profiling Optimizer Version..."; \
 				$(NVCC) $(CFLAGS) -DMEM_LEVEL=$$mem -DTHREADS_PER_BLOCK=$$threads -DSPATIAL_STRIDE=$$stride -DCSV_OUTPUT -DN_BLOCKS=$(BLOCKS) -DREPEAT_SECOND_LOOP=$(CSV_LOOPS) benchmark_optimizer.cu -o benchmark_opt; \
-				./benchmark_opt >> results_optimizer.csv; \
+				./benchmark_opt >> results_optimized.csv; \
 			done \
 		done \
 	done
 
+	@$(MAKE) unlock
+	@echo "Sweep complete. Data saved to results_optimized.csv"
+
+sweep_csv_random: lock
 	@echo "Starting Random CSV Sweep..."
 	@echo "Memory,Stride,ThreadsPerBlock,EnergyPerAccess" > results_random.csv
 	@for mem in 1 2 3; do \
@@ -78,15 +82,15 @@ sweep_csv: lock
 				echo "====================================================="; \
 				echo "Running MEM=$$mem | THREADS=$$threads | STRIDE=$$stride..."; \
 				\
-				echo "Profiling Optimizer Version..."; \
+				echo "Profiling Random Version..."; \
 				$(NVCC) $(CFLAGS) -DMEM_LEVEL=$$mem -DTHREADS_PER_BLOCK=$$threads -DSPATIAL_STRIDE=$$stride -DCSV_OUTPUT -DN_BLOCKS=$(BLOCKS) -DREPEAT_SECOND_LOOP=$(CSV_LOOPS) benchmark_random.cu -o benchmark_rand; \
-				./benchmark_opt >> results_random.csv; \
+				./benchmark_rand >> results_random.csv; \
 			done \
 		done \
 	done
 
 	@$(MAKE) unlock
-	@echo "Sweep complete. Data saved to results_optimizer.csv and results_random.csv"
+	@echo "Sweep complete. Data saved to results_random.csv"
 
 clean:
-	rm -f benchmark_opt benchmark_rand results_optimizer.csv results_random.csv
+	rm -f benchmark_opt benchmark_rand results_optimized.csv results_random.csv
