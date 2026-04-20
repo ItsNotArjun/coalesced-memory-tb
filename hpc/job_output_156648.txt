@@ -1,9 +1,0 @@
-/var/spool/slurmd/job156648/slurm_script: line 16: cd: /home/gargia/GPU_energy_SOP/coalesced-memory-tb/param_identification: No such file or directory
-make: *** No rule to make target 'clean'.  Stop.
-make: *** No targets specified and no makefile found.  Stop.
-make: *** No rule to make target 'run-h100'.  Stop.
-make: *** No rule to make target 'analyze'.  Stop.
-/var/spool/slurmd/job156648/slurm_script: line 23: cd: /home/gargia/GPU_energy_SOP/coalesced-memory-tb: No such file or directory
-make: *** No rule to make target 'clean'.  Stop.
-make: *** No rule to make target 'sweep_csv'.  Stop.
-python: can't open file '/home/gargia/coalesced-memory-tb/hpc/plot_energy.py': [Errno 2] No such file or directory

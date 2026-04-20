@@ -1,3 +1,0 @@
-cache_level,threshold_50_bytes,threshold_50_kb,threshold_50_mb,threshold_99_bytes,threshold_99_kb,threshold_99_mb,inflection_bytes,inflection_kb,inflection_mb,confidence
-L1,526587,514.245,0.502192,745203,727.737,0.710681,492288,480.750,0.469482,HIGH
-L2,52298143,51072.405,49.875396,72712655,71008.452,69.344192,54395008,53120.125,51.875122,HIGH

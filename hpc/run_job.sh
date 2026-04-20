@@ -13,12 +13,12 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 # 2. Activate your personal Conda installation
 source ~/miniconda3/bin/activate gpu_energy
 
-cd /home/gargia/coalesced-memory-tb/param_identification
+#cd /home/gargia/coalesced-memory-tb/param_identification
 
-make clean
-ARCH=sm_90 make
-make run-h100
-make analyze
+#make clean
+#ARCH=sm_90 make
+#make run-h100
+#make analyze
 
 cd /home/gargia/coalesced-memory-tb/calibration
 
